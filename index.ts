@@ -94,8 +94,6 @@ function bisectEasyHardInner(hidden: Hidden, targets: string[], forced: string[]
     return leftResult.concat(rightResult);
 }
 
-
-
 function generateHidden(U: string[]) {
     let hidden = [];
     for (let i = 0; i < U.length; i++) {
@@ -148,6 +146,13 @@ for (let i = 1; i < 9; i++) {
     }
 
     console.log('Universe Size: ', U.length);
+    let emptyHidden = new Hidden(U, []);
+    let fullHidden = new Hidden(U, U);
+    bisectSimple(emptyHidden, emptyHidden.universe, []);
+    bisectSimple(fullHidden, fullHidden.universe, []);
+    console.log('Empty Hidden Guesses: ', emptyHidden.guesses);
+    console.log('Full Hidden Guesses: ', fullHidden.guesses);    
+
     console.log('Simple:');
     calc(simpleTimes);
     console.log('Bisect:');
