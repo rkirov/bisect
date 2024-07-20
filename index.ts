@@ -34,19 +34,16 @@ export class Hidden {
     }
 }
 
-export function simpleGuess(hidden: Hidden, words?: string[]): string[] {
-    // console.log(`guessing ${hidden} with ${words}`);
-    if (!words) {
-        words = hidden.universe;
-    }
-    for (let i = 0; i < words.length; i++) {
-        let nextGuess = words.slice();
-        nextGuess.splice(i, 1);
-        if (hidden.guess(nextGuess)) {
-            return simpleGuess(hidden, nextGuess);
+export function simpleGuess(hidden: Hidden): string[] {
+    let cur = hidden.universe.slice();
+    for (let i = 0; i < hidden.universe.length; i++) {
+        let w = hidden.universe[i];
+        let words = cur.filter(c => c !== w);
+        if (hidden.guess(words)) {
+            cur = words;
         }
     }
-    return words;
+    return cur;
 }
 
 // assumes guess(target + forced) = true 
