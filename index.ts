@@ -1,5 +1,6 @@
 export class Hidden {
     guesses = 0;
+
     constructor(public universe: string[], private hidden: string[]) {
         for (let h of hidden) {
             if (universe.indexOf(h) < 0) {
@@ -25,25 +26,29 @@ export class Hidden {
     }
 
     verify(words: string[]) {
-        if (words.sort().join('') !== this.hidden.sort().join('')) {
+        let sortedWords = words.slice().sort();
+        let sortedHidden = this.hidden.slice().sort();
+        if (sortedWords.join(',') !== sortedHidden.join(',')) {
             throw new Error(`Words ${words} do not match hidden ${this.hidden}`);
         }
     }
+
     toString() {
         return `Hidden: "${this.hidden}"`;
     }
 }
 
 export function simpleGuess(hidden: Hidden): string[] {
-    let cur = hidden.universe.slice();
-    for (let i = 0; i < hidden.universe.length; i++) {
-        let w = hidden.universe[i];
-        let words = cur.filter(c => c !== w);
-        if (hidden.guess(words)) {
-            cur = words;
+    let toRemove = new Set();
+    let U = hidden.universe;
+    for (let i = 0; i < U.length; i++) {
+        let testSet = U.slice();
+        let [rem] = testSet.splice(i, 1);
+        if (hidden.guess(testSet)) {
+            toRemove.add(rem);
         }
     }
-    return cur;
+    return U.filter(w => !toRemove.has(w));
 }
 
 // assumes guess(target + forced) = true 
@@ -60,7 +65,7 @@ function bisectSimple(hidden: Hidden, targets: string[], forced: string[]): stri
     let left = targets.slice(0, m);
     let right = targets.slice(m);
     let leftResult = bisectSimple(hidden, left, right.concat(forced));
-    let rightResult = bisectSimple(hidden, right, forced.concat(leftResult));
+    let rightResult = bisectSimple(hidden, right, leftResult.concat(forced));
     return leftResult.concat(rightResult);
 }
 
@@ -90,8 +95,6 @@ function bisectEasyHardInner(hidden: Hidden, targets: string[], forced: string[]
 }
 
 
-let FUNCTIONS = ['add', 'cos', 'div', 'exp', 'mod', 'mul', 'sin', 'sqr', 'sub', 'tan'];
-let TESTS = 10_000;
 
 function generateHidden(U: string[]) {
     let hidden = [];
@@ -101,42 +104,46 @@ function generateHidden(U: string[]) {
             hidden.push(U[i]);
         }
     }
+    // randomize order
+    hidden = hidden.sort(() => Math.random() - 0.5);
     return new Hidden(U, hidden);
 }
-
-
 
 function calc(times: number[]) {
     let sum = times.reduce((a, b) => a + b, 0);
     let avg = sum / times.length;
     let variance = times.map(t => Math.pow(t - avg, 2)).reduce((a, b) => a + b, 0) / times.length;
     let stdDev = Math.sqrt(variance);
-    console.log(`Average guesses: ${avg}, Standard Deviation: ${stdDev}`);
+    let worseCase = Math.max(...times);
+    let bestCase = Math.min(...times);
+    console.log(`Average guesses: ${avg.toPrecision(4)}, Standard Deviation: ${stdDev.toPrecision(4)}, Worst Case: ${worseCase}, Best Case: ${bestCase}`);
 }
 
-let U = FUNCTIONS;
-for (let i = 1; i < 10; i++) {
-
+let FUNCTIONS = ['add', 'cos', 'div', 'exp', 'mod', 'mul', 'sin', 'sqr'];
+let TESTS = 10_000;
+let U = ['a'];
+for (let i = 1; i < 9; i++) {
     let simpleTimes: number[] = [];
     let bisectTimes: number[] = [];
     let bisectEasyHardTimes: number[] = [];
     for (let i = 0; i < TESTS; i++) {
         let hidden = generateHidden(U);
+        let hidden2 = hidden.clone();
+        let hidden3 = hidden.clone();
+
         let words = simpleGuess(hidden);
-        hidden.verify(words);
         // console.log(`Simple Guessed ${hidden} with ${hidden.guesses} guesses`);
+        hidden.verify(words);
         simpleTimes.push(hidden.guesses);
 
-        let hidden2 = hidden.clone();
         let words2 = bisectSimple(hidden2, hidden2.universe, []);
-        hidden2.verify(words2);
         // console.log(`Bisect Guessed ${hidden2} with ${hidden2.guesses} guesses`);
+        hidden2.verify(words2);
         bisectTimes.push(hidden2.guesses);
 
-        let hidden3 = hidden.clone();
         let words3 = bisectEasyHard(hidden3, hidden3.universe, []);
-        hidden3.verify(words3);
         // console.log(`Bisect Easy Hard Guessed ${hidden3} with ${hidden3.guesses} guesses`);
+        hidden3.verify(words3);
         bisectEasyHardTimes.push(hidden3.guesses);
     }
 
@@ -147,6 +154,7 @@ for (let i = 1; i < 10; i++) {
     calc(bisectTimes);
     console.log('Bisect Easy Hard:');
     calc(bisectEasyHardTimes);
-    // add 10 more for next run
-    U = U.concat(FUNCTIONS.map(f => f + i));
+
+    // double for next iteration
+    U = U.concat(U.map(f => f + i));
 }
