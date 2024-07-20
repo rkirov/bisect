@@ -52,7 +52,7 @@ export function simpleGuess(hidden: Hidden): string[] {
 }
 
 // assumes guess(target + forced) = true 
-// returns minimal result such that guess(target + forced) = true
+// returns minimal result subset of target such that guess(result + forced) = true
 function bisectSimple(hidden: Hidden, targets: string[], forced: string[]): string[] {
     if (targets.length === 0 || hidden.guess(forced)) {
         return [];
